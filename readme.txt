@@ -67,6 +67,9 @@ Yes, you can get your own private wallet here [here](https://blog.nem.io/windows
 * Fix to test settings
 * Fix to clipboard
 
+= 2.1.9 =
+* Added translations
+
 
 == Upgrade Notice ==
 
