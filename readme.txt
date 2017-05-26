@@ -56,19 +56,27 @@ Yes, you can get your own private wallet here [here](https://blog.nem.io/windows
 
 == Changelog ==
 
-= 2.1.6 =
-* Started changelog
 
-= 2.1.7 =
-* Added possibility to show prices in XEM, default currency and XEM and just default currency.
+
+= 2.1.9 =
+* Added translations
+* Now switches out all prices in Cart and Checkout if parameter set.
 
 = 2.1.8 =
 * Minor refactoring
 * Fix to test settings
 * Fix to clipboard
 
-= 2.1.9 =
-* Added translations
+= 2.1.7 =
+* Added possibility to show prices in XEM, default currency and XEM and just default currency.
+
+= 2.1.6 =
+* Started changelog
+
+
+
+
+
 
 
 == Upgrade Notice ==

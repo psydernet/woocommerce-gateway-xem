@@ -5,7 +5,7 @@
  * Description: Take XEM coin payments inn your store.
  * Author: Robin Pedersen
  * Author URI: http://nem.today
- * Version: 2.1.8
+ * Version: 2.1.9
  * Text Domain: woocommerce-gateway-xem
  * Domain Path: /languages
  *
@@ -37,7 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'WC_XEM_PLUGIN_URL', untrailingslashit( plugins_url( basename( plugin_dir_path( __FILE__ ) ), basename( __FILE__ ) ) ) );
-define( 'WC_XEM_VERSION', '2.1.8' );
+define( 'WC_XEM_VERSION', '2.1.9' );
 define( 'WC_XEM_MIN_PHP_VER', '5.3.0' );
 define( 'WC_XEM_MIN_WC_VER', '2.5.0' );
 define( 'WC_XEM_MAIN_FILE', __FILE__ );
@@ -141,86 +141,62 @@ if ( ! class_exists( 'WC_Xem' ) ) {
             //Filter display of prices in woocommerce store based on settings.
             add_filter( 'woocommerce_get_price_html', array( $this, 'xem_change_product_price' ),10,2);
             add_filter( 'woocommerce_cart_item_price', array( $this, 'xem_change_cart_item_price' ),10,3);
+			add_filter( 'woocommerce_cart_item_subtotal', array($this, 'xem_change_cart_item_total_price' ),10,3);
+			add_filter( 'woocommerce_cart_subtotal', array($this, 'xem_change_cart_subtotal_price'), 10, 3);
+			add_filter( 'woocommerce_cart_totals_order_total_html', array($this, 'xem_change_cart_total_price' ),10,1);
+
 		}
 
-        public function db_setup(  ) {
-            $db_version = get_option('wc_xem_db_version');
-            if($db_version !== WC_XEM_VERSION){
 
-                global $wpdb;
-
-                $wpdb->hide_errors();
-
-                require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-
-                \dbDelta(self::create_xem_transactions_table());
-
-                update_option('wc_xem_Db_version', WC_XEM_VERSION);
-            }
-        }
-
-        private static function create_xem_transactions_table()
-        {
-            global $wpdb;
-
-            $collate = '';
-
-            if ($wpdb->has_cap('collation')) {
-                if (!empty($wpdb->charset)) {
-                    $collate .= "DEFAULT CHARACTER SET $wpdb->charset";
-                }
-                if (!empty($wpdb->collate)) {
-                    $collate .= " COLLATE $wpdb->collate";
-                }
-            }
-
-            return "
-			CREATE TABLE {$wpdb->prefix}woocommerce_xem_transactions (
-			id bigint(20) NOT NULL auto_increment,
-			hash bigint(50) NOT NULL default 0,
-			height bigint(20) NOT NULL default 0,
-			amount varchar(32) NOT NULL default 0,
-			orderid bigint(20) NOT NULL default 0,
-			deadline bigint(20) NOT NULL default 0,
-			fee bigint(20) NOT NULL default 0,
-			message longtext NOT NULL default '',
-			message_type TINYINT(2) NOT NULL default 0,
-			recipient bigint(50) NOT NULL default 0,
-			signature bigint(124) NOT NULL default 0,
-			signer bigint(80) NOT NULL default 0,
-			timeStamp bigint(20) NOT NULL default 0,
-			type INT(10) NOT NULL default 0,
-			last_modified datetime NULL,
-			PRIMARY KEY  (id)
-			) $collate;";
-        }
+		public function xem_change_cart_total_price( $value ) {
+			$total = WC()->cart->total;
+			$value = $this->change_price_to_xem($value, $total );
+			return $value;
+		}
+		public function xem_change_cart_subtotal_price( $cart_subtotal, $compound, $that){
+			$cart_subtotal = $this->change_price_to_xem($cart_subtotal, $that->subtotal);
+			return $cart_subtotal;
+		}
 
         public function xem_change_product_price( $price, $that ) {
-            $xem_options = get_option('woocommerce_xem_settings');
-            if($xem_options['prices_in_xem']=== "both"){
-                $currency = strtoupper( get_woocommerce_currency() ) ;
-                $xem_amout = round(Xem_Currency::get_xem_amount($that->price, $currency), 2, PHP_ROUND_HALF_UP);
-                $new_price = $price.'&nbsp;||&nbsp;<span class="woocommerce-Price-amount amount">'.$xem_amout.'&nbsp;</span><span class="woocommerce-Price-currencySymbol">XEM</span>';
-                return $new_price;
-            }elseif ($xem_options['prices_in_xem']=== "only"){
-                $currency = strtoupper( get_woocommerce_currency() ) ;
-                $xem_amout = round(Xem_Currency::get_xem_amount($that->price, $currency), 2, PHP_ROUND_HALF_UP);
-                $new_price = '<span class="woocommerce-Price-amount amount">'.$xem_amout.'&nbsp;</span><span class="woocommerce-Price-currencySymbol">XEM</span>';
-                return $new_price;
-            };
-            return $price;
+	        $price = $this->change_price_to_xem($price, $that->price);
+	        return $price;
         }
 
         public function xem_change_cart_item_price( $price, $cart_item, $cart_item_key ) {
-            $xem_options = get_option('woocommerce_xem_settings');
-            if($xem_options['prices_in_xem']=== "both" || $xem_options['prices_in_xem']=== "only"){
-                $currency = strtoupper( get_woocommerce_currency() ) ;
-                $xem_amout = round(Xem_Currency::get_xem_amount($cart_item['line_subtotal'] + $cart_item['line_subtotal_tax'], $currency), 2, PHP_ROUND_HALF_UP);
-                $new_price = $price.'&nbsp;||&nbsp;<span class="woocommerce-Price-amount amount">'.$xem_amout.'&nbsp;</span><span class="woocommerce-Price-currencySymbol">XEM</span>';
-                return $new_price;
-            }
+	        $price = $this->change_price_to_xem($price, ($cart_item['line_subtotal'] + $cart_item['line_subtotal_tax']) / $cart_item['quantity']);
             return $price;
         }
+
+		public function xem_change_cart_item_total_price( $price, $cart_item, $cart_item_key ) {
+			$price = $this->change_price_to_xem($price, $cart_item['line_subtotal'] + $cart_item['line_subtotal_tax']);
+			return $price;
+		}
+
+
+		public function change_price_to_xem($price_string, $price){
+			$currency = strtoupper( get_woocommerce_currency() ) ;
+			$xem_options = get_option('woocommerce_xem_settings');
+			switch ($xem_options['prices_in_xem']) {
+				case "both":
+					$xem_amout = round(Xem_Currency::get_xem_amount($price, $currency), 2, PHP_ROUND_HALF_UP);
+					if($xem_amout){
+						$new_price_string = $price_string.'&nbsp;||&nbsp;<span class="woocommerce-Price-amount amount">'.$xem_amout.'&nbsp;</span><span class="woocommerce-Price-currencySymbol">XEM</span>';
+						return $new_price_string;
+					}
+					break;
+				case "only":
+					$xem_amout = round(Xem_Currency::get_xem_amount($price, $currency), 2, PHP_ROUND_HALF_UP);
+					if($xem_amout){
+						$new_price_string = '<span class="woocommerce-Price-amount amount">'.$xem_amout.'&nbsp;</span><span class="woocommerce-Price-currencySymbol">XEM</span>';
+						return $new_price_string;
+					}
+					break;
+				default:
+					return $price_string;
+			}
+			return $price_string;
+		}
 
 		/**
 		 * Add the gateways to WooCommerce
