@@ -1,3 +1,4 @@
+#original
 === Woocommerce Gateway XEM ===
 Contributors: inpali
 Donate link: http://nem.today
@@ -83,3 +84,7 @@ Yes, you can get your own private wallet here [here](https://blog.nem.io/windows
 
 = 2.1.6 =
 No notices
+
+Psyder's fork request
+
+Need expansion of plugin to take NEM account number from shop account and search it for other mosaics on NEM network, (XEM is also a mosaic on NEM), if it finds one I specified it applies the discount. there should be a way to stop easy transfer of discount from user to user.
